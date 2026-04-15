@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UART Data Logger & Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        input[type="number"]:hover {
+            border-color: #b8b8b8;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            color: #333;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(132, 250, 176, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-disconnected {
+            background: #fee;
+            color: #c33;
+            border: 2px solid #fcc;
+        }
+
+        .status-connected {
+            background: #efe;
+            color: #3c3;
+            border: 2px solid #cfc;
+        }
+
+        .status-logging {
+            background: #e7f3ff;
+            color: #0066cc;
+            border: 2px solid #b3d9ff;
+        }
+
+        /* Data Display */
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .data-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 12px;
+            color: white;
+            text-align: center;
+        }
+
+        .data-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .data-value {
+            font-size: 32px;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Fault Indicators */
+        .fault-indicators {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .fault-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .fault-light {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid #ddd;
+        /*    transition: all 0.3s; */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .fault-light.green {
+            background: #4caf50;
+            border-color: #45a049;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+        }
+
+        .fault-light.red {
+            background: #f44336;
+            border-color: #da190b;
+            box-shadow: 0 0 20px rgba(244, 67, 54, 0.6);
+        /*    animation: pulse-red 1s ease-in-out infinite; */
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .fault-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        /* Console */
+        .console {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .console-line {
+            margin-bottom: 5px;
+            word-wrap: break-word;
+        }
+
+        .console-timestamp {
+            color: #858585;
+            margin-right: 10px;
+        }
+
+        .console-data {
+            color: #4ec9b0;
+        }
+
+        .console-error {
+            color: #f48771;
+        }
+
+        .console-success {
+            color: #89d185;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            .data-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔌 UART Data Logger & Monitor</h1>
+            <p class="subtitle">Real-time Serial Data Monitoring with File System Access API</p>
+
+            <div class="info-box">
+                💡 <strong>Catatan:</strong> Web Serial API hanya tersedia di browser Chrome/Edge dengan HTTPS atau localhost.
+            </div>
+
+            <div class="status status-disconnected" id="status">
+                ⚠️ Disconnected
+            </div>
+
+            <div class="control-group">
+                <label for="baudRate">Baud Rate:</label>
+                <select id="baudRate">
+                    <option value="9600">9600</option>
+                    <option value="19200">19200</option>
+                    <option value="38400">38400</option>
+                    <option value="57600">57600</option>
+                    <option value="115200" selected>115200</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="loggingSpeed">Data Logging Speed (ms):</label>
+                <input type="number" id="loggingSpeed" step="1" value="1000" min="-1" max="100000">
+            </div>
+
+            <div class="button-group">
+                <button class="btn-primary" id="connectBtn" onclick="connectSerial()">
+                    🔍 Connect Port
+                </button>
+                <button class="btn-success" id="startLogBtn" onclick="startLogging()" disabled>
+                    📝 Start Logging
+                </button>
+                <button class="btn-danger" id="stopLogBtn" onclick="stopLogging()" disabled>
+                    ⏹️ Stop Logging
+                </button>
+                <button class="btn-danger" id="disconnectBtn" onclick="disconnectSerial()" disabled>
+                    ❌ Disconnect
+                </button>
+            </div>
+        </div>
+
+        <div class="grid">
+            <!-- Data Monitor -->
+            <div class="card">
+                <div class="card-title">📊 Real-time Data Monitor</div>
+                
+                <div class="data-grid">
+                    <div class="data-box">
+                        <div class="data-label">Brake Sensor</div>
+                        <div class="data-value" id="brakeSensor">--</div>
+                    </div>
+                    <div class="data-box">
+                        <div class="data-label">Throttle Final</div>
+                        <div class="data-value" id="throttleFinal">--.--</div>
+                    </div>
+                    <div class="data-box">
+                        <div class="data-label">Throttle 1</div>
+                        <div class="data-value" id="throttle1">--</div>
+                    </div>
+                    <div class="data-box">
+                        <div class="data-label">Throttle 2</div>
+                        <div class="data-value" id="throttle2">--</div>
+                    </div>
+                </div>
+
+                <div class="fault-indicators">
+                    <div class="fault-indicator">
+                        <div class="fault-light" id="brakeFaultLight"></div>
+                        <div class="fault-label">Brake Fault</div>
+                    </div>
+                    <div class="fault-indicator">
+                        <div class="fault-light" id="throttleFaultLight"></div>
+                        <div class="fault-label">Throttle Fault</div>
+                    </div>
+                    <div class="fault-indicator">
+                        <div class="fault-light" id="BPPCFaultLight"></div>
+                        <div class="fault-label">BPPC Status</div>
+                    </div>
+                    <div class="fault-indicator">
+                        <div class="fault-light" id="motorStatusLight"></div>
+                        <div class="fault-label">Motor Status</div>
+                    </div>
+                </div>
+
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-label">Packets Received</div>
+                        <div class="stat-value" id="packetCount">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Data Rate</div>
+                        <div class="stat-value" id="dataRate">0/s</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">File Size</div>
+                        <div class="stat-value" id="fileSize">0 KB</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Console -->
+            <div class="card">
+                <div class="card-title">💻 Console Output</div>
+                <div class="console" id="console">
+                    <div class="console-line">
+                        <span class="console-timestamp">[System]</span>
+                        <span>Waiting for serial connection...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="warning" id="warningBox" style="display: none;">
+            ⚠️ <strong>Browser tidak mendukung Web Serial API!</strong><br>
+            Gunakan Chrome atau Edge versi terbaru.
+        </div>
+    </div>
+
+    <script>
+        let port;
+        let reader;
+        let isReading = false;
+        let isLogging = false;
+        let fileHandle = null;
+        let writable = null;
+        let buffer = '';
+        
+        // Statistics
+        let packetCount = 0;
+        let fileSize = 0;
+        let lastPacketTime = Date.now();
+        let packetsPerSecond = 0;
+
+        // Check browser support
+        if (!('serial' in navigator)) {
+            document.getElementById('warningBox').style.display = 'block';
+            document.getElementById('connectBtn').disabled = true;
+        }
+
+        function addToConsole(message, type = 'info') {
+            const consoleEl = document.getElementById('console');
+            const timestamp = new Date().toLocaleTimeString('id-ID');
+            const line = document.createElement('div');
+            line.className = 'console-line';
+            
+            let className = '';
+            if (type === 'data') className = 'console-data';
+            else if (type === 'error') className = 'console-error';
+            else if (type === 'success') className = 'console-success';
+            
+            line.innerHTML = `<span class="console-timestamp">[${timestamp}]</span><span class="${className}">${message}</span>`;
+            
+            consoleEl.appendChild(line);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+            
+            // Keep only last 100 lines
+            if (consoleEl.children.length > 100) {
+                consoleEl.removeChild(consoleEl.firstChild);
+            }
+        }
+
+        async function connectSerial() {
+            try {
+                addToConsole('Opening serial port selection dialog...');
+                port = await navigator.serial.requestPort();
+                
+                const baudRate = parseInt(document.getElementById('baudRate').value);
+                
+                addToConsole(`Opening port with baud rate: ${baudRate}`);
+                await port.open({ baudRate: baudRate });
+                
+                addToConsole('✅ Serial port connected successfully!', 'success');
+                updateStatus('connected');
+                
+                readSerialData();
+                
+            } catch (error) {
+                addToConsole(`❌ Error: ${error.message}`, 'error');
+                console.error('Error:', error);
+            }
+        }
+
+        async function startLogging() {
+            try {
+                // Prompt user to select file location
+                addToConsole('Opening file save dialog...');
+                
+                fileHandle = await window.showSaveFilePicker({
+                    suggestedName: `uart-log-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`,
+                    types: [{
+                        description: 'Text Files',
+                        accept: {'text/plain': ['.txt', '.log']},
+                    }],
+                });
+                
+                writable = await fileHandle.createWritable();
+                isLogging = true;
+                
+                // Write header
+                let header = `UART Data Log - Started at ${new Date().toISOString()}\n`;
+                header += `Format: BrakeSensor(4),Throttle1(4),Throttle2(4),BrakeFault(1),ThrottleFault(1)\n`;
+                header += `${'='.repeat(80)}\n`;
+                await writable.write(header);
+                fileSize += header.length;
+                
+                addToConsole('✅ Logging started! Writing to file...', 'success');
+                updateStatus('logging');
+                
+                document.getElementById('startLogBtn').disabled = true;
+                document.getElementById('stopLogBtn').disabled = false;
+                
+            } catch (error) {
+                addToConsole(`❌ Error starting log: ${error.message}`, 'error');
+                console.error('Error:', error);
+            }
+        }
+
+        async function stopLogging() {
+            if (writable) {
+                try {
+                    let footer = `\n${'='.repeat(80)}\nLog ended at ${new Date().toISOString()}\nTotal packets: ${packetCount}\n`;
+                    await writable.write(footer);
+                    await writable.close();
+                    
+                    addToConsole('✅ Logging stopped. File saved successfully!', 'success');
+                    updateStatus('connected');
+                    
+                } catch (error) {
+                    addToConsole(`❌ Error closing file: ${error.message}`, 'error');
+                }
+            }
+            
+            isLogging = false;
+            writable = null;
+            fileHandle = null;
+            
+            document.getElementById('startLogBtn').disabled = false;
+            document.getElementById('stopLogBtn').disabled = true;
+        }
+
+        function parseUARTData(line) {
+            // Remove newline and trim
+            line = line.trim();
+            
+            // if (line.length < 14) {
+            //     addToConsole(`⚠️ Invalid data length: ${line.length} (expected 14+)`, 'error');
+            //     return null;
+            // }
+
+            if (line.length !== 19) {
+                addToConsole(`⚠️ Invalid data length: ${line.length} (expected 14+)`, 'error');
+                return null;
+            }
+            
+            try {
+                // // Parse fixed-width format: %-4u%-4u%-4u%c%c
+                // let brakeSensor = parseInt(line.substring(0, 4).trim());
+                // brakeSensor = ((parseInt(brakeSensor)*100)/4040).toFixed(0);
+                // let throttle1 = parseInt(line.substring(4, 8).trim());
+                // throttle1 = ((parseInt(throttle1)*100)/4040).toFixed(0);
+                // let throttle2 = parseInt(line.substring(8, 12).trim());
+                // throttle2 = ((parseInt(throttle2)*100)/4040).toFixed(0);
+                // const brakeFault = line.charAt(12);
+                // const throttleFault = line.charAt(13);
+
+                // Parse fixed-width format: "%-5u%-5u%-5u%c%c%c%c
+                let brakeSensor = (parseInt(line.substring(0, 5).trim())/100).toFixed(0);
+                let throttle1 = parseInt(line.substring(5, 10).trim())/100;
+                let throttle2 = parseInt(line.substring(10, 15).trim())/100;
+                const brakeFault = line.charAt(15);
+                const throttleFault = line.charAt(16);
+                const BPPCFault = line.charAt(17);
+                const motorStatus = line.charAt(18);
+
+                
+                // Validation
+                if (isNaN(brakeSensor) || isNaN(throttle1) || isNaN(throttle2)) {
+                    addToConsole(`⚠️ Invalid numeric values in: "${line}"`, 'error');
+                    return null;
+                }
+                
+                if (brakeFault !== 't' && brakeFault !== 'f') {
+                    addToConsole(`⚠️ Invalid brakeFault value: '${brakeFault}'`, 'error');
+                    return null;
+                }
+                
+                if (throttleFault !== 't' && throttleFault !== 'f') {
+                    addToConsole(`⚠️ Invalid throttleFault value: '${throttleFault}'`, 'error');
+                    return null;
+                }
+                
+                let throttleFinal = ((parseInt(throttle1)+parseInt(throttle2))/2).toFixed(2);
+                throttle1 = throttle1.toFixed(0);
+                throttle2 = throttle2.toFixed(0);
+
+                // // BPPC Logic
+                // let BPPCFault = false;
+                // let motorStatus;
+                // if(brakeSensor > 90.00 && throttleFinal > 25.00){
+                //     BPPCFault = true;
+                //     motorStatus = false;
+                // } else if(BPPCFault == true && throttleFinal < 5.00){
+                //     BPPCFault = false;
+                //     motorStatus = true;
+                // } else {
+                //     BPPCFault = false;
+                //     motorStatus = true;
+                // }
+                
+                return {
+                    brakeSensor,
+                    throttleFinal,
+                    throttle1,
+                    throttle2,
+                    brakeFault: brakeFault === 't',
+                    throttleFault: throttleFault === 't',
+                    BPPCFault: BPPCFault === 't',
+                    motorStatus: motorStatus === 't'
+                };
+                
+            } catch (error) {
+                addToConsole(`❌ Parse error: ${error.message}`, 'error');
+                return null;
+            }
+        }
+
+        function updateDisplay(data) {
+            // Update values
+            document.getElementById('brakeSensor').textContent = data.brakeSensor;
+            document.getElementById('throttleFinal').textContent = data.throttleFinal;
+            document.getElementById('throttle1').textContent = data.throttle1;
+            document.getElementById('throttle2').textContent = data.throttle2;
+            
+            // Update fault lights
+            const brakeFaultLight = document.getElementById('brakeFaultLight');
+            const throttleFaultLight = document.getElementById('throttleFaultLight');
+            const BPPCFaultLight = document.getElementById('BPPCFaultLight');
+            const motorStatusLight = document.getElementById('motorStatusLight');
+            
+            if (data.brakeFault) {
+                brakeFaultLight.className = 'fault-light red';
+            } else {
+                brakeFaultLight.className = 'fault-light green';
+            }
+            
+            if (data.throttleFault) {
+                throttleFaultLight.className = 'fault-light red';
+            } else {
+                throttleFaultLight.className = 'fault-light green';
+            }
+
+            if(data.BPPCFault) {
+                BPPCFaultLight.className = 'fault-light red';
+            } else {
+                BPPCFaultLight.className = 'fault-light green';
+            }
+
+            if(data.motorStatus) {
+                motorStatusLight.className = 'fault-light green';
+            } else {
+                motorStatusLight.className = 'fault-light red';
+            }
+            
+            // Update statistics
+            packetCount++;
+            document.getElementById('packetCount').textContent = packetCount;
+            
+            // Calculate data rate
+            const now = Date.now();
+            const elapsed = (now - lastPacketTime) / 1000;
+            if (elapsed > 0) {
+                packetsPerSecond = Math.round(1 / elapsed);
+                document.getElementById('dataRate').textContent = packetsPerSecond + '/s';
+            }
+            lastPacketTime = now;
+            
+            // Update file size
+            document.getElementById('fileSize').textContent = (fileSize / 1024).toFixed(2) + ' KB';
+        }
+
+        async function readSerialData() {
+            isReading = true;
+            
+            try {
+                reader = port.readable.getReader();
+                const textDecoder = new TextDecoder();
+                
+                while (isReading) {
+                    const { value, done } = await reader.read();
+                    
+                    if (done) {
+                        addToConsole('Stream ended or port closed');
+                        break;
+                    }
+                    
+                    if (value) {
+                        const text = textDecoder.decode(value);
+                        buffer += text;
+                        
+                        // Process complete lines
+                        let newlineIndex;
+                        while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+                            const line = buffer.substring(0, newlineIndex);
+                            buffer = buffer.substring(newlineIndex + 1);
+                            
+                            if (line.trim().length > 0) {
+                                addToConsole(`Raw: "${line}"`, 'data');
+                                
+                                // Parse data
+                                const parsedData = parseUARTData(line);
+                                if (parsedData) {
+                                    updateDisplay(parsedData);
+                                    
+                                    // Write to file if logging
+                                    if (isLogging && writable) {
+                                        const timestamp = new Date().toISOString();
+                                        const logLine = `[${timestamp}] ${line} ${parsedData.BPPCFault}\n`;
+                                        await writable.write(logLine);
+                                        fileSize += logLine.length;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                addToConsole(`❌ Read error: ${error.message}`, 'error');
+                console.error('Read error:', error);
+            } finally {
+                if (reader) {
+                    reader.releaseLock();
+                }
+            }
+        }
+
+        async function disconnectSerial() {
+            isReading = false;
+            
+            // Stop logging if active
+            if (isLogging) {
+                await stopLogging();
+            }
+            
+            try {
+                if (reader) {
+                    await reader.cancel();
+                    reader.releaseLock();
+                }
+                
+                if (port) {
+                    await port.close();
+                    addToConsole('Serial port disconnected', 'success');
+                }
+                
+                updateStatus('disconnected');
+                
+                // Reset display
+                document.getElementById('brakeSensor').textContent = '--';
+                document.getElementById('throttleFinal').textContent = '--.--';
+                document.getElementById('throttle1').textContent = '--';
+                document.getElementById('throttle2').textContent = '--';
+                document.getElementById('brakeFaultLight').className = 'fault-light';
+                document.getElementById('throttleFaultLight').className = 'fault-light';
+                document.getElementById('BPPCFaultLight').className = 'fault-light';
+                document.getElementById('motorStatusLight').className = 'fault-light';
+                
+            } catch (error) {
+                addToConsole(`❌ Disconnect error: ${error.message}`, 'error');
+                console.error('Disconnect error:', error);
+            }
+        }
+
+        function updateStatus(state) {
+            const statusEl = document.getElementById('status');
+            const connectBtn = document.getElementById('connectBtn');
+            const startLogBtn = document.getElementById('startLogBtn');
+            const stopLogBtn = document.getElementById('stopLogBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            
+            if (state === 'connected') {
+                statusEl.className = 'status status-connected';
+                statusEl.innerHTML = '✅ Connected';
+                connectBtn.disabled = true;
+                startLogBtn.disabled = false;
+                stopLogBtn.disabled = true;
+                disconnectBtn.disabled = false;
+            } else if (state === 'logging') {
+                statusEl.className = 'status status-logging';
+                statusEl.innerHTML = '📝 Connected & Logging';
+                connectBtn.disabled = true;
+                startLogBtn.disabled = true;
+                stopLogBtn.disabled = false;
+                disconnectBtn.disabled = false;
+            } else {
+                statusEl.className = 'status status-disconnected';
+                statusEl.innerHTML = '⚠️ Disconnected';
+                connectBtn.disabled = false;
+                startLogBtn.disabled = true;
+                stopLogBtn.disabled = true;
+                disconnectBtn.disabled = false;
+            }
+        }
+
+        window.addEventListener('beforeunload', async (e) => {
+            if (isLogging) {
+                e.preventDefault();
+                e.returnValue = '';
+                await stopLogging();
+            }
+            if (port) {
+                await disconnectSerial();
+            }
+        });
+    </script>
+</body>
+</html>

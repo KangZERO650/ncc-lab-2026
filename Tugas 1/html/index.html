@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UART Data Logger & Monitor</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="chart.js" defer></script>
+    <script src="logging.js" defer></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔌 UART Data Logger & Monitor</h1>
+            <p class="subtitle">Real-time Serial Data Monitoring with File System Access API</p>
+
+            <div class="info-box">
+                💡 <strong>Catatan:</strong> Web Serial API hanya tersedia di browser Chrome/Edge dengan HTTPS atau localhost.
+            </div>
+
+            <div class="status status-disconnected" id="status">
+                ⚠️ Disconnected
+            </div>
+
+            <div class="control-group">
+                <label for="baudRate">Baud Rate:</label>
+                <select id="baudRate">
+                    <option value="9600">9600</option>
+                    <option value="19200">19200</option>
+                    <option value="38400">38400</option>
+                    <option value="57600">57600</option>
+                    <option value="115200" selected>115200</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="loggingSpeed">Data Logging Speed (ms):</label>
+                <input type="number" id="loggingSpeed" value="1000" step="1" min="-1" max="100000">
+            </div>
+
+            <div class="button-group">
+                <button class="btn-primary" id="connectBtn" onclick="connectSerial()">
+                    🔍 Connect Port
+                </button>
+                <button class="btn-success" id="startLogBtn" onclick="startLogging()" disabled>
+                    📝 Start Logging
+                </button>
+                <button class="btn-danger" id="stopLogBtn" onclick="stopLogging()" disabled>
+                    ⏹️ Stop Logging
+                </button>
+                <button class="btn-danger" id="disconnectBtn" onclick="disconnectSerial()" disabled>
+                    ❌ Disconnect
+                </button>
+            </div>
+        </div>
+
+        <!-- Real-time Chart -->
+        <div class="grid-full">
+            <div class="card">
+                <div class="card-title">📈 Real-time Sensor Graph</div>
+                <div class="chart-container">
+                    <canvas id="sensorChart"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f44336;"></div>
+                        <span>Brake Sensor</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #4caf50;"></div>
+                        <span>Throttle Final</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #2196f3;"></div>
+                        <span>Throttle 1</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff9800;"></div>
+                        <span>Throttle 2</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <!-- Data Monitor -->
+            <div class="card">
+                <div class="card-title">📊 Real-time Data Monitor</div>
+                
+                <div class="data-grid">
+                    <div class="data-box">
+                        <div class="data-label">Brake Sensor</div>
+                        <div class="data-value" id="brakeSensor">--</div>
+                    </div>
+                    <div class="data-box">
+                        <div class="data-label">Throttle Final</div>
+                        <div class="data-value" id="throttleFinal">--.--</div>
+                    </div>
+                    <div class="data-box">
+                        <div class="data-label">Throttle 1</div>
+                        <div class="data-value" id="throttle1">--</div>
+                    </div>
+                    <div class="data-box">
+                        <div class="data-label">Throttle 2</div>
+                        <div class="data-value" id="throttle2">--</div>
+                    </div>
+                </div>
+
+                <div class="fault-indicators">
+                    <div class="fault-indicator">
+                        <div class="fault-light" id="brakeFaultLight"></div>
+                        <div class="fault-label">Brake Fault</div>
+                    </div>
+                    <div class="fault-indicator">
+                        <div class="fault-light" id="throttleFaultLight"></div>
+                        <div class="fault-label">Throttle Fault</div>
+                    </div>
+                    <div class="fault-indicator">
+                        <div class="fault-light" id="BPPCFaultLight"></div>
+                        <div class="fault-label">BPPC Status</div>
+                    </div>
+                    <div class="fault-indicator">
+                        <div class="fault-light" id="motorStatusLight"></div>
+                        <div class="fault-label">Motor Status</div>
+                    </div>
+                </div>
+
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-label">Packets Received</div>
+                        <div class="stat-value" id="packetCount">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Data Rate</div>
+                        <div class="stat-value" id="dataRate">0/s</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Delay (ms)</div>
+                        <div class="stat-value" id="delayLabel">0 ms</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">File Size</div>
+                        <div class="stat-value" id="fileSize">0 KB</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Console -->
+            <div class="card">
+                <div class="card-title">💻 Console Output</div>
+                <div class="console" id="console">
+                    <div class="console-line">
+                        <span class="console-timestamp">[System]</span>
+                        <span>Waiting for serial connection...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="warning" id="warningBox" style="display: none;">
+            ⚠️ <strong>Browser tidak mendukung Web Serial API!</strong><br>
+            Gunakan Chrome atau Edge versi terbaru.
+        </div>
+    </div>
+</body>
+</html>
