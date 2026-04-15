@@ -7,7 +7,7 @@ services:
     container_name: serial-web-nginx
     ports:
       - "7777:80"
-      # Port 443 akan di-handle oleh reverse proxy VPS Anda
+      # Port 443 akan di-handle oleh reverse proxy VPS
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./html:/usr/share/nginx/html:ro
